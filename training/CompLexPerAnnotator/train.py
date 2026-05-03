@@ -136,9 +136,11 @@ def run_single_training(
     # Extract final metrics from the last epoch's eval (no extra forward pass needed)
     final_train_loss, final_eval_loss = extract_losses(trainer)
     logs = trainer.state.log_history
-    pearson_r = next(l["eval_pearson_r"] for l in reversed(logs) if "eval_pearson_r" in l)
+    last_eval = next(l for l in reversed(logs) if "eval_pearson_r" in l)
+    pearson_r = last_eval["eval_pearson_r"]
+    mean_per_annotator_r = last_eval.get("eval_mean_per_annotator_pearson_r", float("nan"))
     print(f"Final train loss: {final_train_loss:.4f}, final eval loss: {final_eval_loss:.4f}")
-    print(f"Pearson r: {pearson_r:.4f}")
+    print(f"Pearson r: {pearson_r:.4f} (mean per-annotator: {mean_per_annotator_r:.4f})")
 
     # Create result object
     metrics = Metrics(

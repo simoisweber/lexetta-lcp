@@ -77,7 +77,8 @@ def create_trainer_per_annotator(
     def compute_metrics(eval_pred):
         preds, labels = eval_pred
         preds = preds.squeeze()  # (batch, 1) -> (batch,)
-        return {"pearson_r": compute_eval_metrics(preds, labels)}
+        overall_r, mean_per_annotator_r = compute_eval_metrics(preds, labels)
+        return {"pearson_r": overall_r, "mean_per_annotator_pearson_r": mean_per_annotator_r}
 
     training_args = TrainingArguments(
         output_dir=output_dir,
