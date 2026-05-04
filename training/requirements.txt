@@ -9,3 +9,4 @@ scipy
 torch==2.9.1
 transformers==4.57.3
 wordfreq
+ray[tune]
