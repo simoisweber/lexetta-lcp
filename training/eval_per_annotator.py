@@ -49,8 +49,18 @@ def main():
         print(f"  {aid}: {r:.4f}")
 
     output_dir.mkdir(parents=True)
+    results = {
+        "args": {
+            "path": str(run_dir),
+            "seed": args.seed,
+            "test_size": args.test_size,
+            "retriever": args.retriever,
+        },
+        "overall_pearson_r": overall_r,
+        "per_annotator_pearson_r": per_annotator_r,
+    }
     with open(output_dir / "results.json", "w") as f:
-        json.dump({"overall_pearson_r": overall_r, "per_annotator_pearson_r": per_annotator_r}, f, indent=4)
+        json.dump(results, f, indent=4)
     print(f"Results saved to {output_dir / 'results.json'}")
 
 

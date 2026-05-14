@@ -138,9 +138,8 @@ def run_single_training(
     logs = trainer.state.log_history
     last_eval = next(l for l in reversed(logs) if "eval_pearson_r" in l)
     pearson_r = last_eval["eval_pearson_r"]
-    mean_per_annotator_r = last_eval.get("eval_mean_per_annotator_pearson_r", float("nan"))
     print(f"Final train loss: {final_train_loss:.4f}, final eval loss: {final_eval_loss:.4f}")
-    print(f"Pearson r: {pearson_r:.4f} (mean per-annotator: {mean_per_annotator_r:.4f})")
+    print(f"Pearson r: {pearson_r:.4f}")
 
     # Create result object
     metrics = Metrics(
@@ -172,9 +171,9 @@ def get_retriever(retriever_type: RetrieverType, history: list) -> Retriever:
             raise NotImplementedError(f"No Retriever implemented for {retriever_type}")
 
 
-def compute_eval_metrics(preds, labels, annotator_ids=None) -> tuple[float, float]:
+def compute_eval_metrics(preds, labels, annotator_ids=None) -> tuple[float, dict[str, float]]:
     """
-    Compute overall Pearson r and mean per-annotator Pearson r.
+    Compute overall Pearson r and per-annotator Pearson r values.
 
     Per-annotator r is computed only over annotators with >1 example and
     non-zero variance in both predictions and labels (others are skipped to
@@ -184,10 +183,10 @@ def compute_eval_metrics(preds, labels, annotator_ids=None) -> tuple[float, floa
         preds: Model predictions (1-D array, length N)
         labels: Ground-truth labels (1-D array, length N)
         annotator_ids: Annotator ID for each example (length N). If None,
-            mean per-annotator r is returned as NaN.
+            per-annotator r is returned as an empty dict.
 
     Returns:
-        Tuple of (overall_pearson_r, mean_per_annotator_pearson_r)
+        Tuple of (overall_pearson_r, {annotator_id: pearson_r})
     """
     import numpy as np
     from collections import defaultdict
@@ -195,20 +194,19 @@ def compute_eval_metrics(preds, labels, annotator_ids=None) -> tuple[float, floa
     overall_r, _ = stats.pearsonr(preds, labels)
 
     if annotator_ids is None:
-        return float(overall_r), float("nan")
+        return float(overall_r), {}
 
     grouped: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
     for p, l, aid in zip(preds, labels, annotator_ids):
         grouped[aid][0].append(float(p))
         grouped[aid][1].append(float(l))
 
-    per_annotator_r = []
-    for p, l in grouped.values():
+    per_annotator_r = {}
+    for aid, (p, l) in grouped.items():
         if len(p) > 1 and np.std(p) > 0 and np.std(l) > 0:
             r, _ = stats.pearsonr(p, l)
-            per_annotator_r.append(r)
-    mean_r = float(np.mean(per_annotator_r)) if per_annotator_r else float("nan")
-    return float(overall_r), mean_r
+            per_annotator_r[aid] = float(r)
+    return float(overall_r), per_annotator_r
 
 
 def evaluate_model(
@@ -217,7 +215,7 @@ def evaluate_model(
     dataset: DatasetDict,
     config,
     retriever_type: RetrieverType | None = None,
-) -> tuple[float, float]:
+) -> tuple[float, dict[str, float]]:
     """
     Full evaluation pipeline for a loaded model.
 
@@ -238,7 +236,7 @@ def evaluate_model(
         retriever_type: Override the retriever type from config (optional)
 
     Returns:
-        Tuple of (overall_pearson_r, mean_per_annotator_pearson_r)
+        Tuple of (overall_pearson_r, per_annotator_pearson_r_list)
     """
     retriever_type = retriever_type or config.retriever_type
     user_histories = get_user_histories(dataset)
