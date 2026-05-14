@@ -24,7 +24,7 @@ import torch
 from scipy import stats
 from transformers import Trainer, TrainingArguments
 
-from CompLexPerAnnotator.data import load_dataset, preprocess_data, tokenize_per_annotator_dataset, get_user_histories
+from CompLexPerAnnotator.data import load_dataset, tokenize_per_annotator_dataset, get_user_histories
 from CompLexPerAnnotator.model import load_trained
 from CompLexPerAnnotator.schema import TrainingConfig, RetrieverType
 from CompLexPerAnnotator.train import get_retriever
@@ -107,7 +107,6 @@ def main():
 
     print("Loading dataset...")
     dataset = load_dataset(seed=args.seed, test_size=args.test_size)
-    dataset = preprocess_data(dataset)
 
     print("Loading model...")
     model, tokenizer = load_trained(str(run_dir / "model"))

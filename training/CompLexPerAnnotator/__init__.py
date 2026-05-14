@@ -1,3 +1,3 @@
 from CompLexPerAnnotator.schema import TrainingConfig
-from CompLexPerAnnotator.data import load_dataset, preprocess_data
+from CompLexPerAnnotator.data import load_dataset
 from CompLexPerAnnotator.train import run_single_training, save_results, evaluate_model

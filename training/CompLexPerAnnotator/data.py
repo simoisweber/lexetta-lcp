@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 import requests
-import math
 from datasets import Dataset, DatasetDict
 from transformers import PreTrainedTokenizerBase
 
@@ -39,13 +38,26 @@ def select_columns(raw):
     return df
 
 def filter_mwes(df):
+    print("Filtering out MWEs")
     before = len(df)
     df = df[~df["token"].str.contains(r"\s", regex=True, na=False)].reset_index(drop=True)
     print(f"Rows after filtering MWEs: {len(df):,} ({before - len(df):,} dropped)")
     return df
 
 
+def filter_missing(df):
+    print("Filtering out missing values")
+    before = len(df)
+    df = df.dropna()
+    for col in df.select_dtypes(include="object").columns:
+        df = df[df[col].str.strip() != ""]
+    df = df.reset_index(drop=True)
+    print(f"Rows after filtering missing values: {len(df):,} ({before - len(df):,} dropped)")
+    return df
+
+
 def map_labels(df):
+    print("Mapping labels")
     before = len(df)
     df["complexity"] = df["complexity"].map(LABEL_MAP)
     unmapped = df["complexity"].isna().sum()
@@ -56,6 +68,45 @@ def map_labels(df):
     print(f"Rows after label mapping: {len(df):,} ({before - len(df):,} dropped)")
     return df
 
+def split_dataset(df, test_size: float, seed: int, n_buckets: int = 5) -> DatasetDict:
+    """
+    Splits the dataset into train and test users
+
+    Bucket users by history length and split proportionally within each bucket
+
+    Params:
+        df: pandas Dataframe
+        test_size: ratio of users used for testing
+        seed: Random seed for reproduceability
+        n_buckets: number of history-length quantile buckets
+
+    Returns:
+        DatasetDict with 'train' and 'test' splits
+    """
+    user_counts = df.groupby("annotator_id").size().reset_index(name="count")
+    user_counts["bucket"] = pd.qcut(
+        user_counts["count"], q=n_buckets, duplicates="drop", labels=False
+    )
+
+    test_users = (
+        user_counts
+        .groupby("bucket", group_keys=False)["annotator_id"]
+        .apply(lambda s: s.sample(frac=test_size, random_state=seed))
+    )
+    test_user_ids = set(test_users)
+
+    train_df = df[~df["annotator_id"].isin(test_user_ids)].reset_index(drop=True)
+    test_df = df[df["annotator_id"].isin(test_user_ids)].reset_index(drop=True)
+
+    print(
+        f"Train: {len(train_df):,} rows from {train_df['annotator_id'].nunique()} users | "
+        f"Test: {len(test_df):,} rows from {test_df['annotator_id'].nunique()} users"
+    )
+
+    return DatasetDict({
+        "train": Dataset.from_pandas(train_df, preserve_index=False),
+        "test": Dataset.from_pandas(test_df, preserve_index=False),
+    })
 
 def download_dataset(cache_dir: str) -> str:
     """
@@ -105,48 +156,9 @@ def load_dataset(cache_dir: str = "./data/per_annotator", test_size: float = 0.2
     df = select_columns(raw)
     df = map_labels(df)
     df = filter_mwes(df)
+    df = filter_missing(df)
 
-    train_df = df.sample(frac=1 - test_size, random_state=seed)
-    test_df = df.drop(train_df.index).reset_index(drop=True)
-    train_df = train_df.reset_index(drop=True)
-
-    return DatasetDict({
-        "train": Dataset.from_pandas(train_df, preserve_index=False),
-        "test": Dataset.from_pandas(test_df, preserve_index=False),
-    })
-
-def preprocess_data(dataset: DatasetDict):
-    """
-    Filter out rows with missing values or invalid complexity labels.
-    Filter out rows in the test set with too little user history
-
-    Params:
-        dataset: DatasetDict with 'train' and 'test' splits
-
-    Returns:
-        Filtered DatasetDict with only valid rows
-    """
-    def no_missing(row):
-        for v in row.values():
-            if v is None:
-                return False
-            if isinstance(v, float) and math.isnan(v):
-                return False
-            if isinstance(v, str) and v.strip() == "":
-                return False
-        return True
-
-    # filter out rows that contain any empty value
-    train = dataset["train"].filter(lambda row: no_missing(row))
-    test = dataset["test"].filter(lambda row: no_missing(row))
-
-    # drop test annotators with fewer than 10 training examples
-    train_counts = {}
-    for row in train:
-        train_counts[row["annotator_id"]] = train_counts.get(row["annotator_id"], 0) + 1
-    test = test.filter(lambda row: train_counts.get(row["annotator_id"], 0) >= 10)
-
-    return DatasetDict(dict(train=train, test=test))
+    return split_dataset(df, test_size=test_size, seed=seed)
 
 def tokenize_per_annotator_dataset(
         dataset: DatasetDict,
@@ -205,8 +217,6 @@ def get_user_histories(dataset: DatasetDict) -> dict[str, list[dict]]:
     """
     Build a per-annotator history from the dataset.
 
-    Note: it only uses the train split to construct the user history to avoid leaking tests
-
     Params:
         dataset: DatasetDict with 'train' and 'test' splits
 
@@ -214,9 +224,10 @@ def get_user_histories(dataset: DatasetDict) -> dict[str, list[dict]]:
         Dict mapping annotator_id -> list of row dicts (keys: task_id, annotator_id, corpus, sentence, token, complexity)
     """
     history: dict[str, list[dict]] = {}
-    for row in dataset["train"]:
-        aid = row["annotator_id"]
-        if aid not in history:
-            history[aid] = []
-        history[aid].append(dict(row))
+    for key, split in dataset.items():
+        for row in split:
+            aid = row["annotator_id"]
+            if aid not in history:
+                history[aid] = []
+            history[aid].append(dict(row))
     return history

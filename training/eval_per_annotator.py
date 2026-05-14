@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from CompLexPerAnnotator.data import load_dataset, preprocess_data
+from CompLexPerAnnotator.data import load_dataset
 from CompLexPerAnnotator.model import load_trained
 from CompLexPerAnnotator.schema import TrainingConfig, RetrieverType
 from CompLexPerAnnotator.train import evaluate_model
@@ -36,7 +36,6 @@ def main():
 
     print("Loading dataset...")
     dataset = load_dataset(seed=args.seed, test_size=args.test_size)
-    dataset = preprocess_data(dataset)
 
     print("Loading model...")
     model, tokenizer = load_trained(str(run_dir / "model"))

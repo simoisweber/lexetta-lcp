@@ -6,7 +6,6 @@ from ray import tune
 from CompLexPerAnnotator import (
     TrainingConfig,
     load_dataset,
-    preprocess_data,
     run_single_training,
 )
 from CompLexPerAnnotator.schema import RetrieverType
@@ -32,7 +31,6 @@ def objective(config):
         test_size=training_config.test_split,
         seed=training_config.seed,
     )
-    data = preprocess_data(data)
 
     # Ray gives each trial its own working dir; checkpoints land there.
     trial_dir = Path(tune.get_context().get_trial_dir())

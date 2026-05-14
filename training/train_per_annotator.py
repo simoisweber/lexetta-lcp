@@ -2,7 +2,7 @@ import sys
 import json
 from pathlib import Path
 
-from CompLexPerAnnotator import load_dataset, preprocess_data, run_single_training, save_results, TrainingConfig
+from CompLexPerAnnotator import load_dataset, run_single_training, save_results, TrainingConfig
 
 
 if len(sys.argv) != 3:
@@ -25,7 +25,6 @@ with open(output_dir / "config.json", "w") as f:
     f.write(config.model_dump_json(indent=4))
 
 data = load_dataset(test_size=config.test_split, seed=config.seed)
-data = preprocess_data(data)
 
 trainer, run = run_single_training(
     config=config,
