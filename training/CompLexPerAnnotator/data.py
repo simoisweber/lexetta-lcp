@@ -38,6 +38,13 @@ def select_columns(raw):
     df = raw[list(KEEP.keys())].rename(columns=KEEP).copy()
     return df
 
+def filter_mwes(df):
+    before = len(df)
+    df = df[~df["token"].str.contains(r"\s", regex=True, na=False)].reset_index(drop=True)
+    print(f"Rows after filtering MWEs: {len(df):,} ({before - len(df):,} dropped)")
+    return df
+
+
 def map_labels(df):
     before = len(df)
     df["complexity"] = df["complexity"].map(LABEL_MAP)
@@ -48,6 +55,34 @@ def map_labels(df):
     df["complexity"] = df["complexity"].astype(int) / 4.0
     print(f"Rows after label mapping: {len(df):,} ({before - len(df):,} dropped)")
     return df
+
+
+def download_dataset(cache_dir: str) -> str:
+    """
+    Download the per-annotator lexical complexity dataset if not already cached.
+
+    Downloads from https://github.com/MMU-TDMLab/LCP_Subjectivity.
+
+    Params:
+        cache_dir: Directory to save/load the dataset file
+
+    Returns:
+        Local path to the downloaded CSV file
+    """
+    url = "https://raw.githubusercontent.com/MMU-TDMLab/LCP_Subjectivity/master/LCP_2021/batchResults/all.csv"
+    local_path = os.path.join(cache_dir, "all.csv")
+
+    os.makedirs(cache_dir, exist_ok=True)
+
+    if not os.path.exists(local_path):
+        print("Downloading per-annotator data")
+        response = requests.get(url)
+        if not response.ok:
+            raise RuntimeError(f"Failed to download per-annotator data: {response.status_code}")
+        with open(local_path, "w") as f:
+            f.write(response.text)
+
+    return local_path
 
 
 def load_dataset(cache_dir: str = "./data/per_annotator", test_size: float = 0.2, seed: int = 42) -> DatasetDict:
@@ -64,26 +99,12 @@ def load_dataset(cache_dir: str = "./data/per_annotator", test_size: float = 0.2
     Returns:
         DatasetDict with keys 'train' and 'test'
     """
-    url = "https://raw.githubusercontent.com/MMU-TDMLab/LCP_Subjectivity/master/LCP_2021/batchResults/all.csv"
-    local_path = os.path.join(cache_dir, "all.csv")
-
-    os.makedirs(cache_dir, exist_ok=True)
-
-    if not os.path.exists(local_path):
-        print("Downloading per-annotator data")
-        response = requests.get(url)
-        if not response.ok:
-            raise RuntimeError(f"Failed to download per-annotator data: {response.status_code}")
-        with open(local_path, "w") as f:
-            f.write(response.text)
+    local_path = download_dataset(cache_dir)
 
     raw = load(local_path)
     df = select_columns(raw)
     df = map_labels(df)
-
-    before = len(df)
-    df = df[~df["token"].str.contains(r"\s", regex=True, na=False)].reset_index(drop=True)
-    print(f"Rows after filtering MWEs: {len(df):,} ({before - len(df):,} dropped)")
+    df = filter_mwes(df)
 
     train_df = df.sample(frac=1 - test_size, random_state=seed)
     test_df = df.drop(train_df.index).reset_index(drop=True)
@@ -151,7 +172,6 @@ def tokenize_per_annotator_dataset(
     """
 
     def tokenize(row):
-
         retriever = retriever_map[row["annotator_id"]]
         user_history = retriever(sample=row, n=user_history_length)
         user_history_str = ""
