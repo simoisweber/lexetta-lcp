@@ -5,7 +5,7 @@ from transformers import AutoModelForSequenceClassification, Trainer, TrainingAr
 from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 import torch
 
-from CompLexPerAnnotator.schema import TrainingConfig
+from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig
 
 
 def create_base_model(

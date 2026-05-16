@@ -2,7 +2,7 @@ import sys
 import json
 from pathlib import Path
 
-from CompLexPerAnnotator import load_dataset, run_single_training, save_results, TrainingConfig
+from lexetta_lcp.CompLexPerAnnotator import load_dataset, run_single_training, save_results, TrainingConfig
 
 
 if len(sys.argv) != 3:

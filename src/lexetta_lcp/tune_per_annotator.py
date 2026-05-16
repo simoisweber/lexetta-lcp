@@ -3,12 +3,12 @@ from pathlib import Path
 
 from ray import tune
 
-from CompLexPerAnnotator import (
+from lexetta_lcp.CompLexPerAnnotator import (
     TrainingConfig,
     load_dataset,
     run_single_training,
 )
-from CompLexPerAnnotator.schema import RetrieverType
+from lexetta_lcp.CompLexPerAnnotator.schema import RetrieverType
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 

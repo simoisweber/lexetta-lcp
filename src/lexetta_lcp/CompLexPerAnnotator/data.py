@@ -4,7 +4,7 @@ import requests
 from datasets import Dataset, DatasetDict
 from transformers import PreTrainedTokenizerBase
 
-from CompLexPerAnnotator.retriever import Retriever
+from lexetta_lcp.CompLexPerAnnotator.retriever import Retriever
 
 KEEP = {
     "HITId": "task_id",

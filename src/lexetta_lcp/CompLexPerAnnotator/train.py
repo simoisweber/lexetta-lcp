@@ -6,10 +6,10 @@ from scipy import stats
 from transformers import Trainer
 from datasets import DatasetDict
 
-from CompLexPerAnnotator.schema import TrainingConfig, TrainingRun, Metrics, RetrieverType
-from CompLexPerAnnotator.data import tokenize_per_annotator_dataset, get_user_histories
-from CompLexPerAnnotator.model import create_trainer_per_annotator, create_base_model, apply_lora
-from CompLexPerAnnotator.retriever import RandomRetriever, WordFrequencyRetriever, Retriever, CorpusRetriever
+from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig, TrainingRun, Metrics, RetrieverType
+from lexetta_lcp.CompLexPerAnnotator.data import tokenize_per_annotator_dataset, get_user_histories
+from lexetta_lcp.CompLexPerAnnotator.model import create_trainer_per_annotator, create_base_model, apply_lora
+from lexetta_lcp.CompLexPerAnnotator.retriever import RandomRetriever, WordFrequencyRetriever, Retriever, CorpusRetriever
 
 def get_trainable_params(model: Any) -> tuple[int, int]:
     """

@@ -24,10 +24,10 @@ import torch
 from scipy import stats
 from transformers import Trainer, TrainingArguments
 
-from CompLexPerAnnotator.data import load_dataset, tokenize_per_annotator_dataset, get_user_histories
-from CompLexPerAnnotator.model import load_trained
-from CompLexPerAnnotator.schema import TrainingConfig
-from CompLexPerAnnotator.train import get_retriever
+from lexetta_lcp.CompLexPerAnnotator.data import load_dataset, tokenize_per_annotator_dataset, get_user_histories
+from lexetta_lcp.CompLexPerAnnotator.model import load_trained
+from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig
+from lexetta_lcp.CompLexPerAnnotator.train import get_retriever
 
 
 def mean_per_annotator_r(preds: np.ndarray, labels: np.ndarray, annotator_ids: np.ndarray) -> float:

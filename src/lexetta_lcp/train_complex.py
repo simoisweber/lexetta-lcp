@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from CompLex import load_dataset, preprocess_data, run_single_training, TrainingConfig, save_results
+from lexetta_lcp.CompLex import load_dataset, preprocess_data, run_single_training, TrainingConfig, save_results
 
 
 if len(sys.argv) != 3:

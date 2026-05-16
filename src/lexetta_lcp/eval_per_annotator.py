@@ -5,10 +5,10 @@ from pathlib import Path
 from datasets import DatasetDict
 import torch
 
-from CompLexPerAnnotator.data import load_dataset, get_user_histories
-from CompLexPerAnnotator.model import load_trained, predict_batch
-from CompLexPerAnnotator.schema import TrainingConfig, RetrieverType
-from CompLexPerAnnotator.train import get_retriever, compute_eval_metrics
+from lexetta_lcp.CompLexPerAnnotator.data import load_dataset, get_user_histories
+from lexetta_lcp.CompLexPerAnnotator.model import load_trained, predict_batch
+from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig, RetrieverType
+from lexetta_lcp.CompLexPerAnnotator.train import get_retriever, compute_eval_metrics
 
 
 def evaluate_model(

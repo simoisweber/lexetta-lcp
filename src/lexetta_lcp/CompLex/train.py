@@ -5,8 +5,8 @@ from pathlib import Path
 from transformers import Trainer
 from datasets import DatasetDict
 
-from CompLex.schema import TrainingConfig, TrainingRun, Metrics
-from CompLex import tokenize_complex_dataset, create_trainer_complex, create_base_model, apply_lora
+from lexetta_lcp.CompLex.schema import TrainingConfig, TrainingRun, Metrics
+from lexetta_lcp.CompLex import tokenize_complex_dataset, create_trainer_complex, create_base_model, apply_lora
 
 
 def get_trainable_params(model: Any) -> tuple[int, int]:

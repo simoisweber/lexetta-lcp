@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lexetta-lcp"
+version = "1.0"
+description = "LCP Prediction Library for the Lexetta Project"
+requires-python = ""
+authors = [
+    { name = "Simois Weber", email = "simoisweber@gmail.com" },
+]
+dependencies = [
+    "accelerate==1.12.0",
+    "datasets",
+    "numpy==2.2.6",
+    "pandas",
+    "peft==0.18.0",
+    "pydantic==2.12.5",
+    "requests==2.32.5",
+    "scipy",
+    "torch==2.9.1",
+    "transformers==4.57.3",
+    "wordfreq",
+    "ray[tune]",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[project.scripts]
+
+[tool.setuptools.packages.find]
+where = ["src"]

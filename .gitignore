@@ -5,3 +5,4 @@ outputs/
 configs/
 results/
 notebooks/
+*.egg-info
