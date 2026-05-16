@@ -23,6 +23,7 @@ class TrainingConfig(BaseModel):
     seed: int = 42 # random seed for reproducible train/val/test splits
     num_epochs: int
     learning_rate: float
+    warmup_ratio: float = 0.0 # fraction of total training steps used for linear LR warmup; 0 disables warmup
     batch_size: int # batch size during training, higher values allow higher learning rates but also increase vram usage
 
 

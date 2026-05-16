@@ -152,6 +152,7 @@ def create_trainer_per_annotator(
         bf16=True,
         num_train_epochs=config.num_epochs,
         learning_rate=config.learning_rate,
+        warmup_ratio=config.warmup_ratio,
         logging_steps=100,
     )
     
