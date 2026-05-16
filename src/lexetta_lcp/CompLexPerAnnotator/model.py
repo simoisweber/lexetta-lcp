@@ -147,7 +147,7 @@ def create_trainer_per_annotator(
         output_dir=output_dir,
         eval_strategy="epoch",
         per_device_train_batch_size=config.batch_size,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
         per_device_eval_batch_size=config.batch_size,
         bf16=True,
         num_train_epochs=config.num_epochs,
