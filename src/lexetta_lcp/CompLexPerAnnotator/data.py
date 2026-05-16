@@ -200,6 +200,52 @@ def format_history(items: list[dict]) -> str:
     )
 
 
+def format_history_lines(items: list[dict]) -> list[str]:
+    """One '<token>: <Label>' line per history item, for the decoder prompt."""
+    return [
+        f"{item['token']}: {LABEL_NAMES[round(item['complexity'] * 4)]}"
+        for item in items
+    ]
+
+
+def _is_decoder(tokenizer: PreTrainedTokenizerBase) -> bool:
+    return "token_type_ids" not in tokenizer.model_input_names
+
+
+_DECODER_HISTORY_HEADER = "Past judgments by this annotator:\n"
+
+
+def _decoder_suffix(sentence: str, token: str) -> str:
+    return f"\n\nSentence: {sentence}\nWord: {token}\nComplexity:"
+
+
+def _build_decoder_prompt(
+    tokenizer: PreTrainedTokenizerBase,
+    history_items: list[dict],
+    sentence: str,
+    token: str,
+) -> str:
+    """
+    Build a single decoder prompt, dropping oldest history lines until the
+    whole thing fits in tokenizer.model_max_length. The fixed header and the
+    sentence/word/complexity suffix are always kept intact.
+    """
+    suffix = _decoder_suffix(sentence, token)
+    fixed_len = len(tokenizer(_DECODER_HISTORY_HEADER + suffix, add_special_tokens=False)["input_ids"])
+    budget = tokenizer.model_max_length - fixed_len
+
+    lines = format_history_lines(history_items)
+    while lines:
+        history_block = "\n".join(lines)
+        history_len = len(tokenizer(history_block, add_special_tokens=False)["input_ids"])
+        if history_len <= budget:
+            break
+        lines = lines[1:]  # drop the oldest
+
+    history_block = "\n".join(lines)
+    return _DECODER_HISTORY_HEADER + history_block + suffix
+
+
 def encode(
     tokenizer: PreTrainedTokenizerBase,
     history_items: list[dict],
@@ -207,14 +253,25 @@ def encode(
     token: str,
 ) -> dict:
     """
-    Encode a single example as [CLS] user history [SEP] sentence + token [SEP].
+    Encode a single example.
+
+    Encoder backbones: [CLS] user history [SEP] sentence + token [SEP].
+    Decoder backbones: single prompt ending in 'Complexity:' so the last
+    non-pad token pools a useful representation.
     """
+    max_length = tokenizer.model_max_length
+    if _is_decoder(tokenizer):
+        prompt = _build_decoder_prompt(tokenizer, history_items, sentence, token)
+        return tokenizer(
+            prompt,
+            truncation=True,
+            max_length=max_length,
+        )
     return tokenizer(
         format_history(history_items),
         f"{sentence} {token}",
-        padding="max_length",
         truncation="only_first",
-        max_length=512,
+        max_length=max_length,
         return_token_type_ids=True,
     )
 
@@ -228,12 +285,24 @@ def encode_batch(
     """
     Batched version of encode. Returns a dict of lists/tensors with a leading batch dim.
     """
+    max_length = tokenizer.model_max_length
+    if _is_decoder(tokenizer):
+        prompts = [
+            _build_decoder_prompt(tokenizer, items, s, t)
+            for items, s, t in zip(history_items_batch, sentences, tokens)
+        ]
+        return tokenizer(
+            prompts,
+            padding="longest",
+            truncation=True,
+            max_length=max_length,
+        )
     return tokenizer(
         [format_history(items) for items in history_items_batch],
         [f"{s} {t}" for s, t in zip(sentences, tokens)],
-        padding="max_length",
+        padding="longest",
         truncation="only_first",
-        max_length=512,
+        max_length=max_length,
         return_token_type_ids=True,
     )
 

@@ -8,11 +8,14 @@ class RetrieverType(IntEnum):
     CORPUS = 3
 
 class TrainingConfig(BaseModel):
+    model_name: str = "bert-base-uncased" # HF model id; switches the pipeline between encoder and decoder backbones
+    max_input_length: int = 512 # tokenizer max length; raise for decoders with longer context windows
+
     rank: int # lora rank (higher rank -> higher parameter count)
     alpha: int # precision (no effect on parameter count)
     target_modules: list[str] # which parts of the llm we want to fine tune (query, key, value, ...)
     lora_dropout: float
-    
+
     retriever_type: RetrieverType
     user_history_length: int # maximum number of tokens as input
     val_split: float = 0.15 # fraction of users to use for validation

@@ -103,7 +103,10 @@ def run_single_training(
 
     # Create model
     print("Creating model with LoRA adapters...")
-    model, tokenizer = create_base_model()
+    model, tokenizer = create_base_model(
+        model_name=config.model_name,
+        max_input_length=config.max_input_length,
+    )
     model = apply_lora(model, config)
     trainable, total = get_trainable_params(model)
     print(f"Trainable params: {trainable:,} / {total:,} ({100 * trainable / total:.2f}%)")
@@ -125,6 +128,7 @@ def run_single_training(
     # held out for final evaluation in the standalone eval scripts.
     trainer = create_trainer_per_annotator(
         model=model,
+        tokenizer=tokenizer,
         config=config,
         train_dataset=tokenized_train,
         eval_dataset=tokenized_val,

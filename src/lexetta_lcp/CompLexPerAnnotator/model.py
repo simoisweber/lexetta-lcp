@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 from scipy import stats
-from transformers import AutoModelForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer
+from transformers import AutoModelForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer, DataCollatorWithPadding
 
 from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig
 from lexetta_lcp.CompLexPerAnnotator.data import encode_batch, encode
@@ -48,12 +48,20 @@ def compute_eval_metrics(preds, labels, annotator_ids=None) -> tuple[float, dict
 
 def create_base_model(
     model_name: str = "bert-base-uncased",
+    max_input_length: int = 512,
 ) -> Any:
     """
     Create the base model.
 
+    Works for both encoder (BERT-style) and decoder (Llama/Qwen/GPT-style)
+    backbones. For decoders we configure pad token + left padding so that
+    last-token pooling in AutoModelForSequenceClassification gives a usable
+    regression representation.
+
     Params:
         model_name: Name of the pretrained model
+        max_input_length: Sequence length cap stored on the tokenizer so that
+            encode/encode_batch can read it without an extra argument.
 
     Returns:
         A tuple of the base model and the tokenizer
@@ -64,6 +72,14 @@ def create_base_model(
     )
 
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+    tokenizer.model_max_length = max_input_length
+
+    if "token_type_ids" not in tokenizer.model_input_names:
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "left"
+        model.config.pad_token_id = tokenizer.pad_token_id
+
     return model, tokenizer
 
 def apply_lora(model: Any, config: TrainingConfig) -> Any:
@@ -92,6 +108,7 @@ def apply_lora(model: Any, config: TrainingConfig) -> Any:
 
 def create_trainer_per_annotator(
     model: Any,
+    tokenizer: Any,
     config: TrainingConfig,
     train_dataset: Any,
     eval_dataset: Any,
@@ -130,7 +147,9 @@ def create_trainer_per_annotator(
         output_dir=output_dir,
         eval_strategy="epoch",
         per_device_train_batch_size=config.batch_size,
-        per_device_eval_batch_size=16,
+        gradient_accumulation_steps=4,
+        per_device_eval_batch_size=config.batch_size,
+        bf16=True,
         num_train_epochs=config.num_epochs,
         learning_rate=config.learning_rate,
         logging_steps=100,
@@ -142,11 +161,15 @@ def create_trainer_per_annotator(
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         compute_metrics=compute_metrics,
+        data_collator=DataCollatorWithPadding(tokenizer),
     )
 
 def load_trained(model_dir) -> tuple:
     """
     Load a trained model and its tokenizer from a directory.
+
+    Reads the base model name from the saved PEFT adapter config so this works
+    for any backbone the adapter was trained on (encoder or decoder).
 
     Params:
         model_dir: Path to the saved PEFT model directory
@@ -154,7 +177,10 @@ def load_trained(model_dir) -> tuple:
     Returns:
         A tuple of the model and the tokenizer
     """
-    base_model, tokenizer = create_base_model()
+    from peft import PeftConfig
+
+    peft_config = PeftConfig.from_pretrained(model_dir)
+    base_model, tokenizer = create_base_model(model_name=peft_config.base_model_name_or_path)
     model = PeftModel.from_pretrained(model=base_model, model_id=model_dir)
     return model, tokenizer
 
