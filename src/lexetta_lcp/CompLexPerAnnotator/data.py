@@ -5,6 +5,7 @@ from datasets import Dataset, DatasetDict
 from transformers import PreTrainedTokenizerBase
 
 from lexetta_lcp.CompLexPerAnnotator.retriever import Retriever
+from lexetta_lcp.CompLexPerAnnotator.schema import SUPPORTED_MODELS
 
 KEEP = {
     "HITId": "task_id",
@@ -209,7 +210,7 @@ def format_history_lines(items: list[dict]) -> list[str]:
 
 
 def _is_decoder(tokenizer: PreTrainedTokenizerBase) -> bool:
-    return "token_type_ids" not in tokenizer.model_input_names
+    return SUPPORTED_MODELS[tokenizer.name_or_path].is_decoder
 
 
 _DECODER_HISTORY_HEADER = "Past judgments by this annotator:\n"

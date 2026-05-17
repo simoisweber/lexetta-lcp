@@ -2,6 +2,19 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from enum import IntEnum
 
+
+class ModelInfo(BaseModel):
+    is_decoder: bool
+
+
+SUPPORTED_MODELS: dict[str, ModelInfo] = {
+    "bert-base-uncased": ModelInfo(is_decoder=False),
+    "roberta-base": ModelInfo(is_decoder=False),
+    "roberta-large": ModelInfo(is_decoder=False),
+    "Qwen/Qwen2.5-0.5B": ModelInfo(is_decoder=True),
+}
+
+
 class RetrieverType(IntEnum):
     RANDOM = 1
     WORD_FREQUENCY = 2

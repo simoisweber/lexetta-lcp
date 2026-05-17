@@ -8,7 +8,7 @@ from peft import LoraConfig, get_peft_model, TaskType, PeftModel
 from scipy import stats
 from transformers import AutoModelForSequenceClassification, Trainer, TrainingArguments, AutoTokenizer, DataCollatorWithPadding
 
-from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig
+from lexetta_lcp.CompLexPerAnnotator.schema import SUPPORTED_MODELS, TrainingConfig
 from lexetta_lcp.CompLexPerAnnotator.data import encode_batch, encode
 
 
@@ -74,7 +74,7 @@ def create_base_model(
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
     tokenizer.model_max_length = max_input_length
 
-    if "token_type_ids" not in tokenizer.model_input_names:
+    if SUPPORTED_MODELS[model_name].is_decoder:
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
