@@ -100,7 +100,9 @@ def main():
         retriever_type=config.retriever_type,
         split=args.split,
     )
+    mean_per_annotator_r = sum(per_annotator_r.values()) / len(per_annotator_r)
     print(f"Overall Pearson r: {overall_r:.4f}")
+    print(f"Mean per-annotator Pearson r: {mean_per_annotator_r:.4f}")
     for aid, r in per_annotator_r.items():
         print(f"  {aid}: {r:.4f}")
 
@@ -108,6 +110,7 @@ def main():
     results = {
         "config": config.model_dump(),
         "overall_pearson_r": overall_r,
+        "mean_per_annotator_pearson_r": mean_per_annotator_r,
         "per_annotator_pearson_r": per_annotator_r,
     }
     with open(output_dir / "results.json", "w") as f:
