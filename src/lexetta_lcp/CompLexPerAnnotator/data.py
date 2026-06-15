@@ -210,6 +210,14 @@ def format_history_lines(items: list[dict]) -> list[str]:
 
 
 def _is_decoder(tokenizer: PreTrainedTokenizerBase) -> bool:
+    # The decoder flag is stamped onto the tokenizer at creation/load time
+    # (see create_base_model / load_trained), since it is keyed by the *base*
+    # model name. We cannot recover it from tokenizer.name_or_path here: a
+    # trained model's tokenizer is loaded from its adapter directory, so
+    # name_or_path is a local path or Hub adapter id, not a SUPPORTED_MODELS key.
+    flag = getattr(tokenizer, "_lcp_is_decoder", None)
+    if flag is not None:
+        return flag
     return SUPPORTED_MODELS[tokenizer.name_or_path].is_decoder
 
 

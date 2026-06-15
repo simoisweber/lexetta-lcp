@@ -74,7 +74,10 @@ def create_base_model(
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
     tokenizer.model_max_length = max_input_length
 
-    if SUPPORTED_MODELS[model_name].is_decoder:
+    is_decoder = SUPPORTED_MODELS[model_name].is_decoder
+    tokenizer._lcp_is_decoder = is_decoder
+
+    if is_decoder:
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
@@ -198,6 +201,10 @@ def load_trained(model_dir, token: str | None = None, revision: str | None = Non
     base_model, _ = create_base_model(model_name=peft_config.base_model_name_or_path)
     model = PeftModel.from_pretrained(model=base_model, model_id=model_dir, **hub_kwargs)
     tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True, **hub_kwargs)
+    # The tokenizer is loaded from the adapter dir, so its name_or_path is not a
+    # SUPPORTED_MODELS key. Stamp the decoder flag from the known base model name
+    # so _is_decoder (in data.py) does not have to reverse it from name_or_path.
+    tokenizer._lcp_is_decoder = SUPPORTED_MODELS[peft_config.base_model_name_or_path].is_decoder
     return model, tokenizer
 
 
