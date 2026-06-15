@@ -166,25 +166,73 @@ def create_trainer_per_annotator(
         data_collator=DataCollatorWithPadding(tokenizer),
     )
 
-def load_trained(model_dir) -> tuple:
+def load_trained(model_dir, token: str | None = None, revision: str | None = None) -> tuple:
     """
-    Load a trained model and its tokenizer from a directory.
+    Load a trained model and its tokenizer.
 
     Reads the base model name from the saved PEFT adapter config so this works
     for any backbone the adapter was trained on (encoder or decoder).
 
+    The ``model_dir`` may be either a local directory or a Hugging Face Hub
+    repo id (e.g. ``"my-org/my-adapter"``), since PEFT resolves both. For Hub
+    repos the tokenizer is loaded from the adapter repo (not the base model) so
+    any tokenizer customisation saved at training time is preserved.
+
     Params:
-        model_dir: Path to the saved PEFT model directory
+        model_dir: Local path or Hub repo id of the saved PEFT model
+        token: Hugging Face token for private repos (optional)
+        revision: Branch, tag, or commit hash to load from the Hub (optional)
 
     Returns:
         A tuple of the model and the tokenizer
     """
     from peft import PeftConfig
 
-    peft_config = PeftConfig.from_pretrained(model_dir)
-    base_model, tokenizer = create_base_model(model_name=peft_config.base_model_name_or_path)
-    model = PeftModel.from_pretrained(model=base_model, model_id=model_dir)
+    hub_kwargs = {}
+    if token is not None:
+        hub_kwargs["token"] = token
+    if revision is not None:
+        hub_kwargs["revision"] = revision
+
+    peft_config = PeftConfig.from_pretrained(model_dir, **hub_kwargs)
+    base_model, _ = create_base_model(model_name=peft_config.base_model_name_or_path)
+    model = PeftModel.from_pretrained(model=base_model, model_id=model_dir, **hub_kwargs)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=True, **hub_kwargs)
     return model, tokenizer
+
+
+def push_to_hub(
+    model: Any,
+    tokenizer: Any,
+    repo_id: str,
+    private: bool = True,
+    commit_message: str | None = None,
+    token: str | None = None,
+) -> None:
+    """
+    Push a trained PEFT model and its tokenizer to the Hugging Face Hub.
+
+    Only the LoRA adapter weights (not the frozen base model) are uploaded,
+    matching how the model is saved locally. ``load_from_hub`` rebuilds the
+    base model from the adapter config on load.
+
+    Params:
+        model: Trained PEFT model (e.g. from load_trained / apply_lora)
+        tokenizer: Tokenizer matching the model
+        repo_id: Target Hub repo id, e.g. ``"my-org/complex-per-annotator"``.
+            Created if it does not exist.
+        private: Create the repo as private if it does not yet exist
+        commit_message: Optional commit message for the upload
+        token: Hugging Face token (falls back to the cached login if omitted)
+    """
+    kwargs: dict[str, Any] = {"private": private}
+    if token is not None:
+        kwargs["token"] = token
+    if commit_message is not None:
+        kwargs["commit_message"] = commit_message
+
+    model.push_to_hub(repo_id, **kwargs)
+    tokenizer.push_to_hub(repo_id, **kwargs)
 
 
 @torch.no_grad()

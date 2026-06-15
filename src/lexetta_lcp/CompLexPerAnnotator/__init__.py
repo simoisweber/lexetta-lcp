@@ -1,3 +1,4 @@
 from lexetta_lcp.CompLexPerAnnotator.schema import TrainingConfig
 from lexetta_lcp.CompLexPerAnnotator.data import load_dataset
 from lexetta_lcp.CompLexPerAnnotator.train import run_single_training, save_results
+from lexetta_lcp.CompLexPerAnnotator.model import load_trained, push_to_hub

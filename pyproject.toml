@@ -34,6 +34,7 @@ train-per-annotator = "scripts.train_per_annotator:main"
 tune-per-annotator = "scripts.tune_per_annotator:main"
 eval-per-annotator = "scripts.eval_per_annotator:main"
 eval-permutation-test = "scripts.eval_permutation_test:main"
+push-to-hub = "scripts.push_per_annotator:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
